@@ -1,10 +1,14 @@
 # Noise
 
-[![](https://img.shields.io/badge/made%20by-Breth-blue.svg?style=flat-square)](https://breth.app)
 [![Swift Package Manager compatible](https://img.shields.io/badge/SPM-compatible-blue.svg?style=flat-square)](https://github.com/apple/swift-package-manager)
-![Build & Test (macos and linux)](https://github.com/swift-libp2p/swift-noise/actions/workflows/build+test.yml/badge.svg)
+![Build & Test (macOS and linux)](https://github.com/laosb/swift-noise/actions/workflows/build+test.yml/badge.svg)
 
-> A swift implementation of the [Noise Protocol Framework](https://noiseprotocol.org/noise.html). 
+> A Swift implementation of the [Noise Protocol Framework](https://noiseprotocol.org/noise.html). 
+
+> **A fork 🍴 of [swift-libp2p/swift-noise](https://github.com/swift-libp2p/swift-noise/tree/main)**
+> I forked it because I'm focusing on my use of Noise Protocol Framework.
+> The original implementation seem to be tailored to the usage in libp2p, thus requires many modifications for this library to be useful outside of the libp2p ecosystem. Also, the original implementation is all in one huge file, which makes reading & maintaining code miserable. Both factors leads me to believe that my modifications are unlikely to be accepted by the upstream.
+> I'm not a cryptography guy - So all my modifications are focused on developer experience and exposing data structures for my own need. The [warning ⚠️](#%EF%B8%8F-warning) from the original author still applies.
 
 ## Table of Contents
 
@@ -175,7 +179,7 @@ Let's make this code better together! 🤝
 
 ## License
 
-[MIT](LICENSE) © 2022 Breth Inc.
+[MIT](https://laosb.mit-license.org)
 
 
 
