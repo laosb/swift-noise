@@ -6,8 +6,11 @@
 > A Swift implementation of the [Noise Protocol Framework](https://noiseprotocol.org/noise.html). 
 
 > **A fork 🍴 of [swift-libp2p/swift-noise](https://github.com/swift-libp2p/swift-noise/tree/main)**
+>
 > I forked it because I'm focusing on my use of Noise Protocol Framework.
+>
 > The original implementation seem to be tailored to the usage in libp2p, thus requires many modifications for this library to be useful outside of the libp2p ecosystem. Also, the original implementation is all in one huge file, which makes reading & maintaining code miserable. Both factors leads me to believe that my modifications are unlikely to be accepted by the upstream.
+>
 > I'm not a cryptography guy - So all my modifications are focused on developer experience and exposing data structures for my own need. The [warning ⚠️](#%EF%B8%8F-warning) from the original author still applies.
 
 ## Table of Contents
