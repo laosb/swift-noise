@@ -9,10 +9,10 @@ import Foundation
 import Crypto
 
 public struct HandshakePatternImpl<PSISK, PSRSK>: HandshakePattern {
-  public let name: String
-  public let messages: [HandshakeMessagePattern]
-  public let initiatorPreMessages: [HandshakeToken]
-  public let responderPreMessages: [HandshakeToken]
+  public var name: String
+  public var messages: [HandshakeMessagePattern]
+  public var initiatorPreMessages: [HandshakeToken]
+  public var responderPreMessages: [HandshakeToken]
   
   public init(
     name: String,
