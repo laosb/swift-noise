@@ -12,7 +12,7 @@ public struct CipherSuite {
   let cipher: CipherAlgorithm
   let hashFunction: HashFunction
   
-  public init(keyCurve: KeyCurve, cipher: CipherAlgorithm, hashFunction: HashFunction) {
+  public init(_ keyCurve: KeyCurve, _ cipher: CipherAlgorithm, _ hashFunction: HashFunction) {
     self.keyCurve = keyCurve
     self.cipher = cipher
     self.hashFunction = hashFunction

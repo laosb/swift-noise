@@ -13,42 +13,6 @@ public struct Noise {
     /// Max message length allowed by spec
     static let maxMessageLength = 65_535
     
-    public struct Config {
-        let cipherSuite:CipherSuite
-        let handshakePattern:Handshakes.Handshake
-        let initiator:Bool
-        let prologue:[UInt8]
-        let presharedKey:(key:[UInt8], placement:Int)?
-        let staticKeypair:Curve25519.KeyAgreement.PrivateKey?
-        let ephemeralKeypair:Curve25519.KeyAgreement.PrivateKey?
-        let remoteStaticKeypair:Curve25519.KeyAgreement.PublicKey?
-        let remoteEphemeralKeypair:Curve25519.KeyAgreement.PublicKey?
-        
-        public init(cipherSuite:CipherSuite, handshakePattern:Handshakes.Handshake, initiator:Bool, prologue:[UInt8] = [], presharedKey:(key:[UInt8], placement:Int)? = nil, staticKeypair:Curve25519.KeyAgreement.PrivateKey? = nil, ephemeralKeypair:Curve25519.KeyAgreement.PrivateKey? = nil, remoteStaticKeypair:Curve25519.KeyAgreement.PublicKey? = nil) {
-            self.cipherSuite = cipherSuite
-            self.handshakePattern = handshakePattern
-            self.initiator = initiator
-            self.prologue = prologue
-            self.presharedKey = presharedKey
-            self.staticKeypair = staticKeypair
-            self.ephemeralKeypair = ephemeralKeypair
-            self.remoteStaticKeypair = remoteStaticKeypair
-            self.remoteEphemeralKeypair = nil
-        }
-        
-        public init(cipherSuite:CipherSuite, handshake:FundamentalHandshake, prologue:[UInt8] = [], presharedKey:(key:[UInt8], placement:Int)? = nil, staticKeypair:Curve25519.KeyAgreement.PrivateKey? = nil, ephemeralKeypair:Curve25519.KeyAgreement.PrivateKey? = nil) {
-            self.cipherSuite = cipherSuite
-            self.handshakePattern = handshake.handshakePattern
-            self.initiator = handshake.isInitiator
-            self.prologue = prologue
-            self.presharedKey = presharedKey
-            self.staticKeypair = staticKeypair
-            self.ephemeralKeypair = ephemeralKeypair
-            self.remoteStaticKeypair = handshake.remoteStatic
-            self.remoteEphemeralKeypair = nil
-        }
-    }
-    
     public enum Errors:Error {
         case invalidPSK
         case remoteEphemeralKeyAlreadySet
