@@ -17,6 +17,7 @@ public protocol HandshakeConfiguration {
   var ephemeralKey: Curve25519.KeyAgreement.PrivateKey? { get }
   var remoteEphemeralKey: Curve25519.KeyAgreement.PublicKey? { get }
   var presharedKey: [UInt8]? { get }
+  var prologue: [UInt8]? { get }
   var handshakePattern: Pattern { get }
   var cipherSuite: CipherSuite { get }
 }

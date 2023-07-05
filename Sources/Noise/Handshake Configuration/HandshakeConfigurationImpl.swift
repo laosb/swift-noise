@@ -17,6 +17,7 @@ public struct HandshakeConfigurationImpl<Pattern: HandshakePattern>: HandshakeCo
   public var ephemeralKey: PrivateKey?
   public var remoteEphemeralKey: PublicKey?
   public let presharedKey: [UInt8]?
+  public let prologue: [UInt8]?
   public let handshakePattern: Pattern
   public var cipherSuite: CipherSuite
   
@@ -25,6 +26,7 @@ public struct HandshakeConfigurationImpl<Pattern: HandshakePattern>: HandshakeCo
     _ cipherSuite: CipherSuite,
     staticKey: PrivateKey,
     presharedKey: [UInt8]? = nil,
+    prologue: [UInt8]? = nil,
     ephemeralKey: PrivateKey? = nil,
     remoteEphemeralKey: PublicKey? = nil
   ) -> Self where Pattern.PSRSK == Never {
@@ -35,6 +37,7 @@ public struct HandshakeConfigurationImpl<Pattern: HandshakePattern>: HandshakeCo
       ephemeralKey: ephemeralKey,
       remoteEphemeralKey: remoteEphemeralKey,
       presharedKey: presharedKey,
+      prologue: prologue,
       handshakePattern: pattern,
       cipherSuite: cipherSuite
     )
@@ -45,6 +48,7 @@ public struct HandshakeConfigurationImpl<Pattern: HandshakePattern>: HandshakeCo
     _ cipherSuite: CipherSuite,
     staticKey: PrivateKey,
     presharedKey: [UInt8]? = nil,
+    prologue: [UInt8]? = nil,
     ephemeralKey: PrivateKey? = nil,
     remoteEphemeralKey: PublicKey? = nil
   ) -> Self where Pattern.PSISK == Never {
@@ -55,6 +59,7 @@ public struct HandshakeConfigurationImpl<Pattern: HandshakePattern>: HandshakeCo
       ephemeralKey: ephemeralKey,
       remoteEphemeralKey: remoteEphemeralKey,
       presharedKey: presharedKey,
+      prologue: prologue,
       handshakePattern: pattern,
       cipherSuite: cipherSuite
     )
@@ -66,6 +71,7 @@ public struct HandshakeConfigurationImpl<Pattern: HandshakePattern>: HandshakeCo
     staticKey: PrivateKey,
     remoteStaticKey: Curve25519.KeyAgreement.PublicKey,
     presharedKey: [UInt8]? = nil,
+    prologue: [UInt8]? = nil,
     ephemeralKey: PrivateKey? = nil,
     remoteEphemeralKey: PublicKey? = nil
   ) -> Self where Pattern.PSRSK == Curve25519.KeyAgreement.PublicKey {
@@ -76,6 +82,7 @@ public struct HandshakeConfigurationImpl<Pattern: HandshakePattern>: HandshakeCo
       ephemeralKey: ephemeralKey,
       remoteEphemeralKey: remoteEphemeralKey,
       presharedKey: presharedKey,
+      prologue: prologue,
       handshakePattern: pattern,
       cipherSuite: cipherSuite
     )
@@ -87,6 +94,7 @@ public struct HandshakeConfigurationImpl<Pattern: HandshakePattern>: HandshakeCo
     staticKey: PrivateKey,
     remoteStaticKey: Curve25519.KeyAgreement.PublicKey,
     presharedKey: [UInt8]? = nil,
+    prologue: [UInt8]? = nil,
     ephemeralKey: PrivateKey? = nil,
     remoteEphemeralKey: PublicKey? = nil
   ) -> Self where Pattern.PSISK == Curve25519.KeyAgreement.PublicKey {
@@ -97,6 +105,7 @@ public struct HandshakeConfigurationImpl<Pattern: HandshakePattern>: HandshakeCo
       ephemeralKey: ephemeralKey,
       remoteEphemeralKey: remoteEphemeralKey,
       presharedKey: presharedKey,
+      prologue: prologue,
       handshakePattern: pattern,
       cipherSuite: cipherSuite
     )
