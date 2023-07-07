@@ -8,9 +8,6 @@
 import Crypto
 
 public struct HandshakeConfigurationImpl<Pattern: HandshakePattern>: HandshakeConfiguration {
-  public typealias PrivateKey = Curve25519.KeyAgreement.PrivateKey
-  public typealias PublicKey = Curve25519.KeyAgreement.PublicKey
-  
   public let isInitiator: Bool
   public let staticKey: PrivateKey
   public let remoteStaticKey: PublicKey?

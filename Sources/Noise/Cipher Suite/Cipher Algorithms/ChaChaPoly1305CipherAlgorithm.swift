@@ -13,9 +13,9 @@ public struct ChaChaPoly1305CipherAlgorithm: CipherAlgorithm {
   
   public let protocolName: String = "ChaChaPoly"
   
-  public func encrypt(plainText: [UInt8], usingKey symKey: SymmetricKey, nonce: UInt64, withAuthenticatingData ad: [UInt8]) throws -> [UInt8] {
+  public func encrypt(plaintext: [UInt8], usingKey symKey: SymmetricKey, nonce: UInt64, withAuthenticatingData ad: [UInt8]) throws -> [UInt8] {
     // Encrypt the plaintext using our sym key, nonce, and authenticating data
-    let enc = try ChaChaPoly.seal(plainText, using: symKey, nonce: getChaChaPolyNonce(nonce), authenticating: ad)
+    let enc = try ChaChaPoly.seal(plaintext, using: symKey, nonce: getChaChaPolyNonce(nonce), authenticating: ad)
     
     return Array(enc.ciphertext + enc.tag)
   }
@@ -40,7 +40,7 @@ public struct ChaChaPoly1305CipherAlgorithm: CipherAlgorithm {
   }
 }
 
-extension CipherAlgorithm {
+extension CipherAlgorithm where Self == ChaChaPoly1305CipherAlgorithm {
   public static var ChaChaPoly1305: ChaChaPoly1305CipherAlgorithm { .shared }
 }
 

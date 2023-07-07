@@ -13,8 +13,8 @@ public struct AESGCMCipherAlgorithm: CipherAlgorithm {
   
   public let protocolName: String = "AESGCM"
   
-  public func encrypt(plainText: [UInt8], usingKey symKey: SymmetricKey, nonce: UInt64, withAuthenticatingData ad: [UInt8]) throws -> [UInt8] {
-    let enc = try AES.GCM.seal(plainText, using: symKey, nonce: getAESGCMNonce(nonce), authenticating: ad)
+  public func encrypt(plaintext: [UInt8], usingKey symKey: SymmetricKey, nonce: UInt64, withAuthenticatingData ad: [UInt8]) throws -> [UInt8] {
+    let enc = try AES.GCM.seal(plaintext, using: symKey, nonce: getAESGCMNonce(nonce), authenticating: ad)
     
     return Array(enc.ciphertext + enc.tag)
   }
@@ -37,7 +37,7 @@ public struct AESGCMCipherAlgorithm: CipherAlgorithm {
   }
 }
 
-extension CipherAlgorithm {
+extension CipherAlgorithm where Self == AESGCMCipherAlgorithm  {
   public static var AESGCM: AESGCMCipherAlgorithm { .shared }
 }
 
