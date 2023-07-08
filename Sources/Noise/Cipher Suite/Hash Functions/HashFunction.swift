@@ -51,3 +51,26 @@ public extension HashFunction {
     return (output1, output2, output3)
   }
 }
+
+public struct HashFunctionRegistry {
+  public private(set) static var functions: [any HashFunction] = [
+    .sha256,
+    .sha512
+  ]
+  
+  public static var functionNames: [String] {
+    functions.map { $0.protocolName }
+  }
+  
+  public static func register(_ function: any HashFunction) {
+    if functionNames.contains(function.protocolName) {
+      fatalError("Hash Function \(function.protocolName) is already registered.")
+    }
+    
+    functions.append(function)
+  }
+  
+  public static subscript(_ protocolName: String) -> (any HashFunction)? {
+    functions.first { $0.protocolName == protocolName }
+  }
+}

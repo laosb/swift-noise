@@ -22,6 +22,6 @@ public struct SHA256HashFunction: HashFunction {
   }
 }
 
-extension HashFunction {
+extension HashFunction where Self == SHA256HashFunction {
   public static var sha256: SHA256HashFunction { .shared }
 }

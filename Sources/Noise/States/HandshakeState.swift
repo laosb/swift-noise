@@ -59,25 +59,25 @@ public class HandshakeState {
     symmetricState = try SymmetricState(protocolName: protocolName, cipherSuite: config.cipherSuite)
     
     /// Calls MixHash(prologue)
-    symmetricState.mixHash(data: prologue)
+    try symmetricState.mixHash(data: prologue)
     
     for preMessage in config.handshakePattern.initiatorPreMessages {
       switch preMessage {
       case .s:
         if initiator {
-          self.symmetricState.mixHash(data: Array<UInt8>(s.publicKey.rawRepresentation) )
+          try symmetricState.mixHash(data: Array<UInt8>(s.publicKey.rawRepresentation) )
         } else {
           guard let rs = self.rs else { throw Noise.Errors.custom("Responder PreMessage: Invalid remote static key") }
-          self.symmetricState.mixHash(data: Array<UInt8>(rs.rawRepresentation) )
+          try symmetricState.mixHash(data: Array<UInt8>(rs.rawRepresentation) )
         }
         
       case .e:
         if initiator {
           guard let e = self.e else { throw Noise.Errors.custom("Initiator PreMessage: Invalid local ephemeral key") }
-          self.symmetricState.mixHash(data: Array<UInt8>(e.publicKey.rawRepresentation) )
+          try symmetricState.mixHash(data: Array<UInt8>(e.publicKey.rawRepresentation) )
         } else {
           guard let re = self.re else { throw Noise.Errors.custom("Responder PreMessage: Invalid remote ephemeral key") }
-          self.symmetricState.mixHash(data: Array<UInt8>(re.rawRepresentation) )
+          try symmetricState.mixHash(data: Array<UInt8>(re.rawRepresentation) )
         }
         
       default:
@@ -89,19 +89,19 @@ public class HandshakeState {
       switch preMessage {
       case .s:
         if !initiator {
-          self.symmetricState.mixHash(data: Array<UInt8>(s.publicKey.rawRepresentation) )
+          try symmetricState.mixHash(data: Array<UInt8>(s.publicKey.rawRepresentation) )
         } else {
           guard let rs = self.rs else { throw Noise.Errors.custom("Initiator PreMessage: Invalid remote static key") }
-          self.symmetricState.mixHash(data: Array<UInt8>(rs.rawRepresentation) )
+          try symmetricState.mixHash(data: Array<UInt8>(rs.rawRepresentation) )
         }
         
       case .e:
         if !initiator {
           guard let e = self.e else { throw Noise.Errors.custom("Responder PreMessage: Invalid local ephemeral key") }
-          self.symmetricState.mixHash(data: Array<UInt8>(e.publicKey.rawRepresentation) )
+          try symmetricState.mixHash(data: Array<UInt8>(e.publicKey.rawRepresentation) )
         } else {
           guard let re = self.re else { throw Noise.Errors.custom("Initiator PreMessage: Invalid remote ephemeral key") }
-          self.symmetricState.mixHash(data: Array<UInt8>(re.rawRepresentation) )
+          try symmetricState.mixHash(data: Array<UInt8>(re.rawRepresentation) )
         }
         
       default:
@@ -138,7 +138,7 @@ public class HandshakeState {
         //else { print("Warning: e already set, this is only acceptable during testing") }
         //messageBuffer.writeBytes(e!.publicKey.rawRepresentation)
         messageBuffer.append(contentsOf: e!.publicKey.rawRepresentation)
-        symmetricState.mixHash(data: Array<UInt8>(e!.publicKey.rawRepresentation))
+        try symmetricState.mixHash(data: Array<UInt8>(e!.publicKey.rawRepresentation))
         if psk.count > 0 {
           try symmetricState.mixKey(inputKeyMaterial: Array<UInt8>(e!.publicKey.rawRepresentation))
         }
@@ -239,7 +239,7 @@ public class HandshakeState {
             guard re == nil else { throw Noise.Errors.remoteEphemeralKeyAlreadySet }
             //guard inboundMsg.count >= symmetricState.HASHLEN else { throw Noise.Errors.custom("Message payload unexpected length") }
             re = try Curve25519.KeyAgreement.PublicKey(rawRepresentation: inboundMsg.prefix(expected))
-            symmetricState.mixHash(data: Array<UInt8>(re!.rawRepresentation) )
+            try symmetricState.mixHash(data: Array<UInt8>(re!.rawRepresentation) )
             bytesRead += expected
             if psk.count > 0 {
               try symmetricState.mixKey(inputKeyMaterial: Array<UInt8>(re!.rawRepresentation) )

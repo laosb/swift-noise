@@ -98,16 +98,12 @@ public class CipherState: Codable {
     case cipher, k, n
   }
   
-  enum DecodeError: Error {
-    case invalidCipherAlgorithm
-  }
-  
   public required convenience init(from decoder: Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     
     let cipherAlgorithmName = try container.decode(String.self, forKey: .cipher)
     guard let cipher = CipherAlgorithmRegistry[cipherAlgorithmName] else {
-      throw DecodeError.invalidCipherAlgorithm
+      throw StateDecodingError.invalidCipherAlgorithm
     }
     
     let k = try container.decodeIfPresent(SymmetricKey.self, forKey: .k)

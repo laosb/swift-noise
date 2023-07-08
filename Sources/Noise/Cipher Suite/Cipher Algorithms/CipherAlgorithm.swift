@@ -20,12 +20,12 @@ public protocol CipherAlgorithm {
 }
 
 public struct CipherAlgorithmRegistry {  
-  static var algorithms: [any CipherAlgorithm] = [
+  public private(set) static var algorithms: [any CipherAlgorithm] = [
     .AESGCM,
     .ChaChaPoly1305
   ]
   
-  static var algorithmNames: [String] {
+  public static var algorithmNames: [String] {
     algorithms.map { $0.protocolName }
   }
   
