@@ -17,7 +17,7 @@ public class HandshakeState {
   private let symmetricState: SymmetricState
   
   /// The static key of the local party.
-  private var s: PrivateKey?
+  private var s: PrivateKey
   /// The ephemeral key of the local party.
   private var e: PrivateKey?
   /// The static key of the remote party.
@@ -65,7 +65,6 @@ public class HandshakeState {
       switch preMessage {
       case .s:
         if initiator {
-          guard let s = self.s else { throw Noise.Errors.custom("Initiator PreMessage: Invalid local static key") }
           self.symmetricState.mixHash(data: Array<UInt8>(s.publicKey.rawRepresentation) )
         } else {
           guard let rs = self.rs else { throw Noise.Errors.custom("Responder PreMessage: Invalid remote static key") }
@@ -90,7 +89,6 @@ public class HandshakeState {
       switch preMessage {
       case .s:
         if !initiator {
-          guard let s = self.s else { throw Noise.Errors.custom("Responder PreMessage: Invalid local static key") }
           self.symmetricState.mixHash(data: Array<UInt8>(s.publicKey.rawRepresentation) )
         } else {
           guard let rs = self.rs else { throw Noise.Errors.custom("Initiator PreMessage: Invalid remote static key") }
@@ -147,7 +145,6 @@ public class HandshakeState {
         
       case .s:
         // For "s": Appends EncryptAndHash(s.public_key) to the buffer.
-        guard let s = s else { throw Noise.Errors.custom("Op 's': Local Static Key isn't available. Aborting") }
         let spk = try symmetricState.encryptAndHash(plaintext: Array<UInt8>(s.publicKey.rawRepresentation) )
         messageBuffer.append(contentsOf: spk)
         //messageBuffer.writeBytes(spk)
@@ -163,14 +160,14 @@ public class HandshakeState {
           guard let e = e, let rs = rs else { throw Noise.Errors.custom("Op 'es': Local Ephemeral and/or Remote Static Keys aren't available. Aborting") }
           try symmetricState.mixKey(inputKeyMaterial: dh(keyPair: e, pubKey: rs))
         } else {
-          guard let s = s, let re = re else { throw Noise.Errors.custom("Op 'es': Local Static and/or Remote Ephemeral Keys aren't available. Aborting") }
+          guard let re else { throw Noise.Errors.custom("Op 'es': Remote Ephemeral Keys aren't available. Aborting") }
           try symmetricState.mixKey(inputKeyMaterial: dh(keyPair: s, pubKey: re))
         }
         
       case .se:
         // For "se": Calls MixKey(DH(s, re)) if initiator, MixKey(DH(e, rs)) if responder.
         if initiator {
-          guard let s = s, let re = re else { throw Noise.Errors.custom("Op 'se': Local Static and/or Remote Ephemeral Keys aren't available. Aborting") }
+          guard let re else { throw Noise.Errors.custom("Op 'se': Remote Ephemeral Keys aren't available. Aborting") }
           try symmetricState.mixKey(inputKeyMaterial: dh(keyPair: s, pubKey: re))
         } else {
           guard let e = e, let rs = rs else { throw Noise.Errors.custom("Op 'se': Local Ephemeral and/or Remote Static Keys aren't available. Aborting") }
@@ -179,7 +176,7 @@ public class HandshakeState {
         
       case .ss:
         // For "ss": Calls MixKey(DH(s, rs)).
-        guard let s = s, let rs = rs else { throw Noise.Errors.custom("Op 'ss': Local Static and/or Remote Static Keys aren't available. Aborting") }
+        guard let rs else { throw Noise.Errors.custom("Op 'ss': Remote Static Keys aren't available. Aborting") }
         try symmetricState.mixKey(inputKeyMaterial: dh(keyPair: s, pubKey: rs))
         
       case .psk:
@@ -273,14 +270,14 @@ public class HandshakeState {
           guard let e = e, let rs = rs else { throw Noise.Errors.custom("Op 'es': Local Ephemeral and/or Remote Static Keys aren't available. Aborting") }
           try symmetricState.mixKey(inputKeyMaterial: dh(keyPair: e, pubKey: rs))
         } else {
-          guard let s = s, let re = re else { throw Noise.Errors.custom("Op 'es': Local Static and/or Remote Ephemeral Keys aren't available. Aborting") }
+          guard let re else { throw Noise.Errors.custom("Op 'es': Remote Ephemeral Keys aren't available. Aborting") }
           try symmetricState.mixKey(inputKeyMaterial: dh(keyPair: s, pubKey: re))
         }
         
       case .se:
         // For "se": Calls MixKey(DH(s, re)) if initiator, MixKey(DH(e, rs)) if responder.
         if initiator {
-          guard let s = s, let re = re else { throw Noise.Errors.custom("Op 'se': Local Static and/or Remote Ephemeral Keys aren't available. Aborting") }
+          guard let re else { throw Noise.Errors.custom("Op 'se': Remote Ephemeral Keys aren't available. Aborting") }
           try symmetricState.mixKey(inputKeyMaterial: dh(keyPair: s, pubKey: re))
         } else {
           guard let e = e, let rs = rs else { throw Noise.Errors.custom("Op 'se': Local Ephemeral and/or Remote Static Keys aren't available. Aborting") }
@@ -289,7 +286,7 @@ public class HandshakeState {
         
       case .ss:
         // For "ss": Calls MixKey(DH(s, rs)).
-        guard let s = s, let rs = rs else { throw Noise.Errors.custom("Op 'ss': Local Static and/or Remote Static Keys aren't available. Aborting") }
+        guard let rs else { throw Noise.Errors.custom("Op 'ss': Remote Static Keys aren't available. Aborting") }
         try symmetricState.mixKey(inputKeyMaterial: dh(keyPair: s, pubKey: rs))
         
       case .psk:
