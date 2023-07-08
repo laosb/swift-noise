@@ -22,6 +22,10 @@ public protocol HandshakePattern {
   var responderPreMessages: [HandshakeToken] { get set }
 }
 
+public enum HandshakePatternError: Error {
+  case invalidPresharedKeyPlacement
+}
+
 public extension HandshakePattern {
   var hasPSK: Bool {
     messages.flatMap { $0.tokens }.contains(.psk)
@@ -39,7 +43,7 @@ public extension HandshakePattern {
       }
     } else {
       guard pattern.messages.count > (placement - 1) else {
-        throw Noise.Errors.custom("Invalid presharedKey placement")
+        throw HandshakePatternError.invalidPresharedKeyPlacement
       }
       
       switch pattern.messages[placement - 1] {

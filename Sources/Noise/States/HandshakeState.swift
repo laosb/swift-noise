@@ -11,6 +11,30 @@ import Crypto
 /// A HandshakeState object contains a `SymmetricState` plus DH variables (`s`, `e`, `rs`, `re`) and a variable representing the handshake pattern.
 /// - Note: During the handshake phase each party has a single HandshakeState, which can be deleted once the handshake is finished.
 public class HandshakeState: Codable {
+  enum HandshakeError: Error {
+    enum ErrorStage {
+      case preMessage(isInitiator: Bool)
+      case token(HandshakeToken)
+      /// When calling methods to get keys.
+      case get
+    }
+    
+    case invalidPresharedKey
+    case unsupportedPreMessage
+    case noRemoteStaticKey(ErrorStage)
+    case noRemoteEphemeralKey(ErrorStage)
+    case noLocalEphemeralKey(ErrorStage)
+    case remoteStaticKeyAlreadySet
+    case remoteEphemeralKeyAlreadySet
+    case writeWhenShouldRead
+    case readWhenShouldWrite
+    case handshakeFinished
+    case messageTooLong
+    case messageTooShort
+    case handshakeInProgress
+  }
+  
+  
   public typealias PublicKey = Curve25519.KeyAgreement.PublicKey
   public typealias PrivateKey = Curve25519.KeyAgreement.PrivateKey
   
@@ -48,7 +72,7 @@ public class HandshakeState: Codable {
     
     if let psk = config.presharedKey {
       guard psk.count == 32 else {
-        throw Noise.Errors.invalidPSK
+        throw HandshakeError.invalidPresharedKey
       }
       self.psk = psk
     }
@@ -67,21 +91,27 @@ public class HandshakeState: Codable {
         if initiator {
           try symmetricState.mixHash(data: Array<UInt8>(s.publicKey.rawRepresentation) )
         } else {
-          guard let rs = self.rs else { throw Noise.Errors.custom("Responder PreMessage: Invalid remote static key") }
+          guard let rs else {
+            throw HandshakeError.noRemoteStaticKey(.preMessage(isInitiator: false))
+          }
           try symmetricState.mixHash(data: Array<UInt8>(rs.rawRepresentation) )
         }
         
       case .e:
         if initiator {
-          guard let e = self.e else { throw Noise.Errors.custom("Initiator PreMessage: Invalid local ephemeral key") }
+          guard let e else {
+            throw HandshakeError.noLocalEphemeralKey(.preMessage(isInitiator: true))
+          }
           try symmetricState.mixHash(data: Array<UInt8>(e.publicKey.rawRepresentation) )
         } else {
-          guard let re = self.re else { throw Noise.Errors.custom("Responder PreMessage: Invalid remote ephemeral key") }
+          guard let re else {
+            throw HandshakeError.noRemoteEphemeralKey(.preMessage(isInitiator: false))
+          }
           try symmetricState.mixHash(data: Array<UInt8>(re.rawRepresentation) )
         }
         
       default:
-        throw Noise.Errors.unsupportedPreMessage
+        throw HandshakeError.unsupportedPreMessage
       }
     }
     
@@ -91,21 +121,27 @@ public class HandshakeState: Codable {
         if !initiator {
           try symmetricState.mixHash(data: Array<UInt8>(s.publicKey.rawRepresentation) )
         } else {
-          guard let rs = self.rs else { throw Noise.Errors.custom("Initiator PreMessage: Invalid remote static key") }
+          guard let rs else {
+            throw HandshakeError.noRemoteStaticKey(.preMessage(isInitiator: true))
+          }
           try symmetricState.mixHash(data: Array<UInt8>(rs.rawRepresentation) )
         }
         
       case .e:
         if !initiator {
-          guard let e = self.e else { throw Noise.Errors.custom("Responder PreMessage: Invalid local ephemeral key") }
+          guard let e else {
+            throw HandshakeError.noLocalEphemeralKey(.preMessage(isInitiator: false))
+          }
           try symmetricState.mixHash(data: Array<UInt8>(e.publicKey.rawRepresentation) )
         } else {
-          guard let re = self.re else { throw Noise.Errors.custom("Initiator PreMessage: Invalid remote ephemeral key") }
+          guard let re else {
+            throw HandshakeError.noRemoteEphemeralKey(.preMessage(isInitiator: true))
+          }
           try symmetricState.mixHash(data: Array<UInt8>(re.rawRepresentation) )
         }
         
       default:
-        throw Noise.Errors.unsupportedPreMessage
+        throw HandshakeError.unsupportedPreMessage
       }
     }
   }
@@ -114,15 +150,9 @@ public class HandshakeState: Codable {
   /// - Note: This method aborts if any EncryptAndHash() call returns an error
   public func writeMessage(payload: [UInt8]) throws -> (buffer: [UInt8], c1: CipherState?, c2: CipherState?) {
     
-    guard self.shouldWrite() else {
-      throw Noise.Errors.custom("noise: unexpected call to WriteMessage should be ReadMessage")
-    }
-    guard msgIndex < messages.count else {
-      throw Noise.Errors.custom("noise: no handshake messages left")
-    }
-    guard payload.count < Noise.maxMessageLength else {
-      throw Noise.Errors.custom("noise: message is too long")
-    }
+    guard self.shouldWrite() else { throw HandshakeError.writeWhenShouldRead }
+    guard msgIndex < messages.count else { throw HandshakeError.handshakeFinished }
+    guard payload.count < Noise.maxMessageLength else { throw HandshakeError.messageTooLong }
     
     // Get the next set of messages to process...
     let pattern = messages[msgIndex].tokens
@@ -151,38 +181,40 @@ public class HandshakeState: Codable {
         
       case .ee:
         // For "ee": Calls MixKey(DH(e, re)).
-        guard let e = e, let re = re else { throw Noise.Errors.custom("Op 'ee': Local and/or Remote Ephemeral Keys aren't available. Aborting") }
+        guard let e else { throw HandshakeError.noLocalEphemeralKey(.token(.ee)) }
+        guard let re else { throw HandshakeError.noRemoteEphemeralKey(.token(.ee)) }
         try symmetricState.mixKey(inputKeyMaterial: dh(keyPair: e, pubKey: re))
         
       case .es:
         // For "es": Calls MixKey(DH(e, rs)) if initiator, MixKey(DH(s, re)) if responder.
         if initiator {
-          guard let e = e, let rs = rs else { throw Noise.Errors.custom("Op 'es': Local Ephemeral and/or Remote Static Keys aren't available. Aborting") }
+          guard let e else { throw HandshakeError.noLocalEphemeralKey(.token(.es)) }
+          guard let rs else { throw HandshakeError.noRemoteStaticKey(.token(.es)) }
           try symmetricState.mixKey(inputKeyMaterial: dh(keyPair: e, pubKey: rs))
         } else {
-          guard let re else { throw Noise.Errors.custom("Op 'es': Remote Ephemeral Keys aren't available. Aborting") }
+          guard let re else { throw HandshakeError.noRemoteEphemeralKey(.token(.es)) }
           try symmetricState.mixKey(inputKeyMaterial: dh(keyPair: s, pubKey: re))
         }
         
       case .se:
         // For "se": Calls MixKey(DH(s, re)) if initiator, MixKey(DH(e, rs)) if responder.
         if initiator {
-          guard let re else { throw Noise.Errors.custom("Op 'se': Remote Ephemeral Keys aren't available. Aborting") }
+          guard let re else { throw HandshakeError.noRemoteEphemeralKey(.token(.se)) }
           try symmetricState.mixKey(inputKeyMaterial: dh(keyPair: s, pubKey: re))
         } else {
-          guard let e = e, let rs = rs else { throw Noise.Errors.custom("Op 'se': Local Ephemeral and/or Remote Static Keys aren't available. Aborting") }
+          guard let e else { throw HandshakeError.noLocalEphemeralKey(.token(.se)) }
+          guard let rs else { throw HandshakeError.noRemoteStaticKey(.token(.se)) }
           try symmetricState.mixKey(inputKeyMaterial: dh(keyPair: e, pubKey: rs))
         }
         
       case .ss:
         // For "ss": Calls MixKey(DH(s, rs)).
-        guard let rs else { throw Noise.Errors.custom("Op 'ss': Remote Static Keys aren't available. Aborting") }
+        guard let rs else { throw HandshakeError.noRemoteStaticKey(.token(.ss)) }
         try symmetricState.mixKey(inputKeyMaterial: dh(keyPair: s, pubKey: rs))
         
       case .psk:
-        guard psk.count == 32 else { throw Noise.Errors.invalidPSK }
+        guard psk.count == 32 else { throw HandshakeError.invalidPresharedKey }
         try symmetricState.mixKeyAndHash(inputKeyMaterial: psk)
-        
       }
     }
     
@@ -191,7 +223,6 @@ public class HandshakeState: Codable {
     
     // Appends EncryptAndHash(payload) to the buffer.
     try messageBuffer.append(contentsOf: symmetricState.encryptAndHash(plaintext: payload))
-    //try messageBuffer.writeBytes( symmetricState.encryptAndHash(plaintext: payload) )
     
     // If there are no more message patterns returns two new CipherState objects by calling Split().
     if msgIndex >= messages.count {
@@ -205,15 +236,9 @@ public class HandshakeState: Codable {
   /// Takes a byte sequence containing a Noise handshake message, and a payload_buffer to write the message's plaintext payload into
   /// - Note: This method aborts if any DecryptAndHash() call returns an error
   public func readMessage(_ inboundMessage: [UInt8]) throws -> (payload: [UInt8], c1: CipherState?, c2: CipherState?) {
-    guard self.shouldRead() else {
-      throw Noise.Errors.custom("noise: unexpected call to ReadMessage should be WriteMessage")
-    }
-    guard msgIndex < messages.count else {
-      throw Noise.Errors.custom("noise: no handshake messages left")
-    }
+    guard self.shouldRead() else { throw HandshakeError.readWhenShouldWrite }
+    guard msgIndex < messages.count else { throw HandshakeError.handshakeFinished }
     
-    // TODO: rsSet = false
-    // TODO: ss.checkpoint()
     symmetricState.checkpoint()
     
     // Get the next set of messages to process...
@@ -231,12 +256,12 @@ public class HandshakeState: Codable {
         if message == .s && symmetricState.cipherState.hasKey() {
           expected += 16
         }
-        guard inboundMsg.count >= expected else { throw Noise.Errors.custom("Err msg too short") }
+        guard inboundMsg.count >= expected else { throw HandshakeError.messageTooShort }
         
         do {
           if message == .e {
             // For "e": Sets re (which must be empty) to the next DHLEN bytes from the message. Calls MixHash(re.public_key).
-            guard re == nil else { throw Noise.Errors.remoteEphemeralKeyAlreadySet }
+            guard re == nil else { throw HandshakeError.remoteEphemeralKeyAlreadySet }
             //guard inboundMsg.count >= symmetricState.HASHLEN else { throw Noise.Errors.custom("Message payload unexpected length") }
             re = try Curve25519.KeyAgreement.PublicKey(rawRepresentation: inboundMsg.prefix(expected))
             try symmetricState.mixHash(data: Array<UInt8>(re!.rawRepresentation) )
@@ -247,7 +272,7 @@ public class HandshakeState: Codable {
             
           } else if message == .s {
             // For "s": Sets temp to the next DHLEN + 16 bytes of the message if HasKey() == True, or to the next DHLEN bytes otherwise. Sets rs (which must be empty) to DecryptAndHash(temp).
-            guard rs == nil else { throw Noise.Errors.custom("Remote static key has previously been set. Aborting") }
+            guard rs == nil else { throw HandshakeError.remoteStaticKeyAlreadySet }
             rs = try Curve25519.KeyAgreement.PublicKey(rawRepresentation: symmetricState.decryptAndHash(ciphertext: Array(inboundMsg.prefix(expected))))
             bytesRead += expected
             
@@ -261,38 +286,40 @@ public class HandshakeState: Codable {
         
       case .ee:
         // For "ee": Calls MixKey(DH(e, re)).
-        guard let e = e, let re = re else { throw Noise.Errors.custom("Op 'ee': Local and/or Remote Ephermeral Keys aren't available. Aborting") }
+        guard let e else { throw HandshakeError.noLocalEphemeralKey(.token(.ee)) }
+        guard let re else { throw HandshakeError.noRemoteEphemeralKey(.token(.ee)) }
         try symmetricState.mixKey(inputKeyMaterial: dh(keyPair: e, pubKey: re))
         
       case .es:
         // For "es": Calls MixKey(DH(e, rs)) if initiator, MixKey(DH(s, re)) if responder.
         if initiator {
-          guard let e = e, let rs = rs else { throw Noise.Errors.custom("Op 'es': Local Ephemeral and/or Remote Static Keys aren't available. Aborting") }
+          guard let e else { throw HandshakeError.noLocalEphemeralKey(.token(.es)) }
+          guard let rs else { throw HandshakeError.noRemoteStaticKey(.token(.es)) }
           try symmetricState.mixKey(inputKeyMaterial: dh(keyPair: e, pubKey: rs))
         } else {
-          guard let re else { throw Noise.Errors.custom("Op 'es': Remote Ephemeral Keys aren't available. Aborting") }
+          guard let re else { throw HandshakeError.noRemoteEphemeralKey(.token(.es)) }
           try symmetricState.mixKey(inputKeyMaterial: dh(keyPair: s, pubKey: re))
         }
         
       case .se:
         // For "se": Calls MixKey(DH(s, re)) if initiator, MixKey(DH(e, rs)) if responder.
         if initiator {
-          guard let re else { throw Noise.Errors.custom("Op 'se': Remote Ephemeral Keys aren't available. Aborting") }
+          guard let re else { throw HandshakeError.noRemoteEphemeralKey(.token(.se)) }
           try symmetricState.mixKey(inputKeyMaterial: dh(keyPair: s, pubKey: re))
         } else {
-          guard let e = e, let rs = rs else { throw Noise.Errors.custom("Op 'se': Local Ephemeral and/or Remote Static Keys aren't available. Aborting") }
+          guard let e else { throw HandshakeError.noLocalEphemeralKey(.token(.se)) }
+          guard let rs else { throw HandshakeError.noRemoteStaticKey(.token(.se)) }
           try symmetricState.mixKey(inputKeyMaterial: dh(keyPair: e, pubKey: rs))
         }
         
       case .ss:
         // For "ss": Calls MixKey(DH(s, rs)).
-        guard let rs else { throw Noise.Errors.custom("Op 'ss': Remote Static Keys aren't available. Aborting") }
+        guard let rs else { throw HandshakeError.noRemoteStaticKey(.token(.ss)) }
         try symmetricState.mixKey(inputKeyMaterial: dh(keyPair: s, pubKey: rs))
         
       case .psk:
-        guard psk.count == 32 else { throw Noise.Errors.invalidPSK }
+        guard psk.count == 32 else { throw HandshakeError.invalidPresharedKey }
         try symmetricState.mixKeyAndHash(inputKeyMaterial: psk)
-        
       }
     }
     
@@ -359,7 +386,8 @@ public class HandshakeState: Codable {
   /// ChannelBinding provides a value that uniquely identifies the session and can
   /// be used as a channel binding. It is an error to call this method before the
   /// handshake is complete.
-  public func channelBinding() -> [UInt8] {
+  public func channelBinding() throws -> [UInt8] {
+    guard msgIndex >= messages.count else { throw HandshakeError.handshakeInProgress }
     return symmetricState.h
   }
   
@@ -367,7 +395,7 @@ public class HandshakeState: Codable {
   /// a handshake. It is an error to call this method if a handshake message
   /// containing a static key has not been read.
   public func peerStatic() throws -> PublicKey {
-    guard let rs = rs else { throw Noise.Errors.custom("Peer Static Key not set yet") }
+    guard let rs else { throw HandshakeError.noRemoteStaticKey(.get) }
     return rs
   }
   
@@ -375,13 +403,13 @@ public class HandshakeState: Codable {
   /// a handshake. It is an error to call this method if a handshake message
   /// containing a static key has not been read.
   public func peerEphemeral() throws -> PublicKey {
-    guard let re = re else { throw Noise.Errors.custom("Peer Ephemeral Key not set yet") }
+    guard let re else { throw HandshakeError.noRemoteEphemeralKey(.get) }
     return re
   }
   
   /// LocalEphemeral returns the local ephemeral key pair generated during a handshake.
   public func localEphemeral() throws -> PrivateKey {
-    guard let e = e else { throw Noise.Errors.custom("Local Ephemeral KeyPair not set yet") }
+    guard let e else { throw HandshakeError.noLocalEphemeralKey(.get) }
     return e
   }
   

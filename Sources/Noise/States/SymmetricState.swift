@@ -12,6 +12,11 @@ import Crypto
 /// - Note: It is so-named because it encapsulates all the "symmetric crypto" used by Noise.
 /// - Note: During the handshake phase each party has a single SymmetricState, which can be deleted once the handshake is finished.
 public class SymmetricState: Codable {
+  enum SymmetricStateError: Error {
+    case invalidProtocolName
+    case noTempKey
+  }
+  
   private let hashFunction: HashFunction
   private let cipher: CipherAlgorithm
   
@@ -42,7 +47,9 @@ public class SymmetricState: Codable {
   init(protocolName: String, cipherSuite: CipherSuite) throws {
     //var buf:ByteBuffer
     //buf.writeString(protocolName)
-    guard var proto = protocolName.data(using: .utf8) else { throw Noise.Errors.invalidProtocolName }
+    guard var proto = protocolName.data(using: .utf8) else {
+      throw SymmetricStateError.invalidProtocolName
+    }
     
     hashFunction = cipherSuite.hashFunction
     cipher = cipherSuite.cipher
@@ -81,12 +88,12 @@ public class SymmetricState: Codable {
   }
   
   /// Sets h = HASH(h || data)
-  func mixHash(data:[UInt8]) throws {
+  func mixHash(data: [UInt8]) throws {
     h = try hashFunction.hash(h + data)
   }
   
   /// This function is used for handling pre-shared symmetric keys, as described in [section 9](https://noiseprotocol.org/noise.html#pre-shared-symmetric-keys)
-  func mixKeyAndHash(inputKeyMaterial:[UInt8]) throws {
+  func mixKeyAndHash(inputKeyMaterial: [UInt8]) throws {
     // Sets ck, temp_h, temp_k = HKDF(ck, input_key_material, 3).
     let (newCK, tempH, tempK) = try hashFunction.HKDF(chainingKey: ck, inputKeyMaterial: inputKeyMaterial, numOutputs: 3)
     
@@ -97,7 +104,7 @@ public class SymmetricState: Codable {
     // Calls MixHash(temp_h)
     try mixHash(data: tempH)
     
-    guard let tk = tempK else { throw Noise.Errors.custom("Failed to generate 3 outputs, tempK is nil") }
+    guard let tk = tempK else { throw SymmetricStateError.noTempKey }
     if hashFunction.hashLength == 64 {
       // If hashFunction.hashLength is 64, then truncates temp_k to 32 bytes.
       try cipherState.initializeKey(key: Array(tk.prefix(32)))
@@ -130,7 +137,7 @@ public class SymmetricState: Codable {
   }
   
   /// Returns a pair of CipherState objects for encrypting transport messages
-  func split() throws -> (c1:CipherState, c2:CipherState) {
+  func split() throws -> (c1: CipherState, c2: CipherState) {
     var (tempK1, tempK2, _) = try hashFunction.HKDF(chainingKey: ck, inputKeyMaterial: [], numOutputs: 2)
     
     if hashFunction.hashLength == 64 {

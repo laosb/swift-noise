@@ -20,7 +20,7 @@ public struct AESGCMCipherAlgorithm: CipherAlgorithm {
   }
   
   public func decrypt(ciphertext: [UInt8], usingKey symKey: SymmetricKey, nonce: UInt64, withAuthenticatingData ad: [UInt8]) throws -> [UInt8] {
-    guard ciphertext.count >= 16 else { throw Noise.Errors.custom("Invalid ciphertext length (no tag data found)") }
+    guard ciphertext.count >= 16 else { throw CipherAlgorithmError.invalidCiphertextLength }
     
     let sealedBox = try AES.GCM.SealedBox(nonce: getAESGCMNonce(nonce), ciphertext: ciphertext.dropLast(16), tag: ciphertext.suffix(16))
     

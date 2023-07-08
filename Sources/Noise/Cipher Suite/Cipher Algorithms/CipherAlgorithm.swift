@@ -19,7 +19,14 @@ public protocol CipherAlgorithm {
   func decrypt(ciphertext: [UInt8], usingKey symKey: SymmetricKey, nonce: UInt64, withAuthenticatingData ad: [UInt8]) throws -> [UInt8]
 }
 
-public struct CipherAlgorithmRegistry {  
+public enum CipherAlgorithmError: Error {
+  /// The length of ciphertext is invalid.
+  ///
+  /// This error is usually caused by the lack of tag data.
+  case invalidCiphertextLength
+}
+
+public struct CipherAlgorithmRegistry {
   public private(set) static var algorithms: [any CipherAlgorithm] = [
     .AESGCM,
     .ChaChaPoly1305

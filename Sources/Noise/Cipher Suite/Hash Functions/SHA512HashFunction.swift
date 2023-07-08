@@ -17,7 +17,9 @@ public struct SHA512HashFunction: HashFunction {
   public func hash(_ data: [UInt8]) -> [UInt8] { Array(SHA512.hash(data: data)) }
   
   public func HKDF(chainingKey: SymmetricKey, inputKeyMaterial: [UInt8], numOutputs: Int) throws -> ([UInt8], [UInt8], [UInt8]?) {
-    guard chainingKey.bitCount == 512 else { throw Noise.Errors.custom("ChainingKey is expected to be 64 Bytes in length, but is \(chainingKey.bitCount) bits instead") }
+    guard chainingKey.bitCount == 512 else {
+      throw HashFunctionError.invalidChainingKeyLength(gotBitCount: chainingKey.bitCount, expectedBitCount: 512)
+    }
     return try hkdf(chainingKey: chainingKey, inputKeyMaterial: inputKeyMaterial, numOutputs: numOutputs, usingHashFunction: SHA512.self)
   }
 }

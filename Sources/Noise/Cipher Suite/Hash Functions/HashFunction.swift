@@ -15,6 +15,14 @@ public protocol HashFunction {
   func HKDF(chainingKey: SymmetricKey, inputKeyMaterial: [UInt8], numOutputs: Int) throws -> ([UInt8], [UInt8], [UInt8]?)
 }
 
+public enum HashFunctionError: Error {
+  /// Invalid number of outputs.
+  ///
+  /// The number of outputs must be either `2` or `3`.
+  case invalidNumOutputs
+  case invalidChainingKeyLength(gotBitCount: Int, expectedBitCount: Int)
+}
+
 public extension HashFunction {
   /// An OSX 10.X compatible implementation of the HMAC-based Extract-and-Expand Key Derivation Function (HKDF).
   /// - Note: ChainingKey is expected to be 32 Bytes in length
@@ -26,7 +34,7 @@ public extension HashFunction {
     numOutputs: Int,
     usingHashFunction: H.Type
   ) throws -> ([UInt8], [UInt8], [UInt8]?) {
-    guard numOutputs == 2 || numOutputs == 3 else { throw Noise.Errors.custom("Invalid numOutputs specified. numOutputs must either be 2 or 3") }
+    guard numOutputs == 2 || numOutputs == 3 else { throw HashFunctionError.invalidNumOutputs }
     
     var hmac = HMAC<H>(key: chainingKey)
     hmac.update(data: inputKeyMaterial)
