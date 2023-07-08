@@ -10,7 +10,7 @@ import Crypto
 
 /// A HandshakeState object contains a `SymmetricState` plus DH variables (`s`, `e`, `rs`, `re`) and a variable representing the handshake pattern.
 /// - Note: During the handshake phase each party has a single HandshakeState, which can be deleted once the handshake is finished.
-public class HandshakeState {
+public class HandshakeState: Codable {
   public typealias PublicKey = Curve25519.KeyAgreement.PublicKey
   public typealias PrivateKey = Curve25519.KeyAgreement.PrivateKey
   

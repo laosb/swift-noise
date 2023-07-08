@@ -7,7 +7,7 @@
 
 import Foundation
 
-public enum HandshakeMessagePattern {
+public enum HandshakeMessagePattern: Codable {
   case inbound([HandshakeToken])
   case outbound([HandshakeToken])
   

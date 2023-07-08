@@ -8,7 +8,7 @@
 import Foundation
 
 /// Noise defined handshake tokens.
-public enum HandshakeToken {
+public enum HandshakeToken: String, Codable {
   case s
   case e
   case ee
