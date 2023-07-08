@@ -18,7 +18,7 @@ public struct HandshakeConfigurationImpl<Pattern: HandshakePattern>: HandshakeCo
   public let handshakePattern: Pattern
   public var cipherSuite: CipherSuite
   
-  init(
+  public init(
     isInitiator: Bool,
     staticKey: PrivateKey,
     remoteStaticKey: PublicKey?,
@@ -42,95 +42,5 @@ public struct HandshakeConfigurationImpl<Pattern: HandshakePattern>: HandshakeCo
     self.prologue = prologue
     self.handshakePattern = handshakePattern
     self.cipherSuite = cipherSuite
-  }
-  
-  public static func initiator(
-    of pattern: Pattern,
-    _ cipherSuite: CipherSuite,
-    staticKey: PrivateKey,
-    presharedKey: [UInt8]? = nil,
-    prologue: [UInt8]? = nil,
-    ephemeralKey: PrivateKey? = nil,
-    remoteEphemeralKey: PublicKey? = nil
-  ) -> Self where Pattern.PSRSK == Never {
-    .init(
-      isInitiator: true,
-      staticKey: staticKey,
-      remoteStaticKey: nil,
-      ephemeralKey: ephemeralKey,
-      remoteEphemeralKey: remoteEphemeralKey,
-      presharedKey: presharedKey,
-      prologue: prologue,
-      handshakePattern: pattern,
-      cipherSuite: cipherSuite
-    )
-  }
-  
-  public static func responder(
-    of pattern: Pattern,
-    _ cipherSuite: CipherSuite,
-    staticKey: PrivateKey,
-    presharedKey: [UInt8]? = nil,
-    prologue: [UInt8]? = nil,
-    ephemeralKey: PrivateKey? = nil,
-    remoteEphemeralKey: PublicKey? = nil
-  ) -> Self where Pattern.PSISK == Never {
-    .init(
-      isInitiator: false,
-      staticKey: staticKey,
-      remoteStaticKey: nil,
-      ephemeralKey: ephemeralKey,
-      remoteEphemeralKey: remoteEphemeralKey,
-      presharedKey: presharedKey,
-      prologue: prologue,
-      handshakePattern: pattern,
-      cipherSuite: cipherSuite
-    )
-  }
-  
-  public static func initiator(
-    of pattern: Pattern,
-    _ cipherSuite: CipherSuite,
-    staticKey: PrivateKey,
-    remoteStaticKey: Curve25519.KeyAgreement.PublicKey,
-    presharedKey: [UInt8]? = nil,
-    prologue: [UInt8]? = nil,
-    ephemeralKey: PrivateKey? = nil,
-    remoteEphemeralKey: PublicKey? = nil
-  ) -> Self where Pattern.PSRSK == Curve25519.KeyAgreement.PublicKey {
-    .init(
-      isInitiator: true,
-      staticKey: staticKey,
-      remoteStaticKey: remoteStaticKey,
-      ephemeralKey: ephemeralKey,
-      remoteEphemeralKey: remoteEphemeralKey,
-      presharedKey: presharedKey,
-      prologue: prologue,
-      handshakePattern: pattern,
-      cipherSuite: cipherSuite
-    )
-  }
-  
-  public static func responder(
-    of pattern: Pattern,
-    _ cipherSuite: CipherSuite,
-    staticKey: PrivateKey,
-    remoteStaticKey: Curve25519.KeyAgreement.PublicKey,
-    presharedKey: [UInt8]? = nil,
-    prologue: [UInt8]? = nil,
-    ephemeralKey: PrivateKey? = nil,
-    remoteEphemeralKey: PublicKey? = nil
-  ) -> Self where Pattern.PSISK == Curve25519.KeyAgreement.PublicKey {
-    .init(
-      isInitiator: false,
-      staticKey: staticKey,
-      remoteStaticKey: remoteStaticKey,
-      ephemeralKey: ephemeralKey,
-      remoteEphemeralKey: remoteEphemeralKey,
-      presharedKey: presharedKey,
-      prologue: prologue,
-      handshakePattern: pattern,
-      cipherSuite: cipherSuite
-    )
   }
 }
