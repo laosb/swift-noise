@@ -9,6 +9,8 @@ import Foundation
 import Crypto
 
 /// A CipherState object contains `k` and `n` variables, which it uses to encrypt and decrypt ciphertexts.
+///
+/// This object conforms to `Codable` so that it can be serialized and deserialized, in case you want to persist it to disk for later use.
 /// - Note: During the handshake phase each party has a single CipherState, but during the transport phase each party has two CipherState objects: one for sending, and one for receiving.
 public class CipherState: Codable {
   public let cipher: any CipherAlgorithm
@@ -89,6 +91,7 @@ public class CipherState: Codable {
   public func decrypt(ciphertext: [UInt8]) throws -> [UInt8] {
     return try self.decryptWithAD(ad: [], ciphertext: ciphertext)
   }
+  
   
   // MARK: Codable conformance
   enum CodingKeys: CodingKey {

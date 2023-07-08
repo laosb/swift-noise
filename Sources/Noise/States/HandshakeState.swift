@@ -36,50 +36,30 @@ public class HandshakeState {
   
   public init(config: any HandshakeConfiguration) throws {
     /// Sets message_patterns to the message patterns from handshake_pattern.
-    self.messagePattern = config.handshakePattern.messagePattern //Array(handshake.messagePattern.map { $0.messages }.joined())
-    self.prologue = config.prologue
+    messages = config.handshakePattern.messages
+    prologue = config.prologue ?? []
     
     /// Sets the initiator, s, e, rs, and re variables to the corresponding arguments.
-    self.initiator = config.initiator
-    self.s = config.staticKeypair
-    self.e = config.ephemeralKeypair
-    self.rs = config.remoteStaticKeypair
-    self.re = config.remoteEphemeralKeypair
+    initiator = config.isInitiator
+    s = config.staticKey
+    e = config.ephemeralKey
+    rs = config.remoteStaticKey
+    re = config.remoteEphemeralKey
     
-    /// Handle Pre Shared Key if one was provided
-    var pskModifier = ""
     if let psk = config.presharedKey {
-      self.psk = psk.key
-      guard psk.key.count == 32 else {
+      guard psk.count == 32 else {
         throw Noise.Errors.invalidPSK
       }
-      pskModifier = "psk\(psk.placement)"
-      
-      if psk.placement == 0 {
-        switch messagePattern[0] {
-        case .inbound(let messages):
-          messagePattern[0] = .inbound([.psk] + messages)
-        case .outbound(let messages):
-          messagePattern[0] = .outbound([.psk] + messages)
-        }
-      } else {
-        guard messagePattern.count > (psk.placement - 1) else { throw Errors.custom("Invalid presharedKey placement") }
-        switch messagePattern[psk.placement - 1] {
-        case .inbound(let messages):
-          messagePattern[psk.placement - 1] = .inbound(messages + [.psk])
-        case .outbound(let messages):
-          messagePattern[psk.placement - 1] = .outbound(messages + [.psk])
-        }
-      }
+      self.psk = psk
     }
     
-    self.protocolName = "Noise_" + config.handshakePattern.name + pskModifier + "_" + config.cipherSuite.protocolName
+    protocolName = config.fullProtocolName
     
     /// Calls InitializeSymmetric(protocol_name)
-    self.symmetricState = try SymmetricState(protocolName: protocolName, cipherSuite: config.cipherSuite)
+    symmetricState = try SymmetricState(protocolName: protocolName, cipherSuite: config.cipherSuite)
     
     /// Calls MixHash(prologue)
-    self.symmetricState.mixHash(data: prologue)
+    symmetricState.mixHash(data: prologue)
     
     for preMessage in config.handshakePattern.initiatorPreMessages {
       switch preMessage {
@@ -134,12 +114,12 @@ public class HandshakeState {
   
   /// Takes a payload byte sequence which may be zero-length, and a message_buffer to write the output into
   /// - Note: This method aborts if any EncryptAndHash() call returns an error
-  public func writeMessage(payload:[UInt8]) throws -> (buffer:[UInt8], c1:CipherState?, c2:CipherState?) {
+  public func writeMessage(payload: [UInt8]) throws -> (buffer: [UInt8], c1: CipherState?, c2: CipherState?) {
     
     guard self.shouldWrite() else {
       throw Noise.Errors.custom("noise: unexpected call to WriteMessage should be ReadMessage")
     }
-    guard _msgIndex < messagePattern.count else {
+    guard msgIndex < messages.count else {
       throw Noise.Errors.custom("noise: no handshake messages left")
     }
     guard payload.count < Noise.maxMessageLength else {
@@ -147,9 +127,9 @@ public class HandshakeState {
     }
     
     // Get the next set of messages to process...
-    let pattern = messagePattern[_msgIndex].messages
+    let pattern = messages[msgIndex].tokens
     
-    var messageBuffer:[UInt8] = []
+    var messageBuffer: [UInt8] = []
     
     // Fetches and deletes the next message pattern from message_patterns, then sequentially processes each token from the message pattern:
     for message in pattern {
@@ -210,14 +190,14 @@ public class HandshakeState {
     }
     
     // Increment our message index counter
-    _msgIndex += 1
+    msgIndex += 1
     
     // Appends EncryptAndHash(payload) to the buffer.
     try messageBuffer.append(contentsOf: symmetricState.encryptAndHash(plaintext: payload))
     //try messageBuffer.writeBytes( symmetricState.encryptAndHash(plaintext: payload) )
     
     // If there are no more message patterns returns two new CipherState objects by calling Split().
-    if _msgIndex >= messagePattern.count {
+    if msgIndex >= messages.count {
       let split = try symmetricState.split()
       return (buffer: messageBuffer, c1: split.c1, c2: split.c2)
     }
@@ -227,13 +207,11 @@ public class HandshakeState {
   
   /// Takes a byte sequence containing a Noise handshake message, and a payload_buffer to write the message's plaintext payload into
   /// - Note: This method aborts if any DecryptAndHash() call returns an error
-  public func readMessage(_ inboundMessage:[UInt8]) throws -> (payload:[UInt8], c1:CipherState?, c2:CipherState?) {
-    //public func readMessage(_ inboundMessage:ByteBuffer) throws -> (payload:ByteBuffer, c1:CipherState?, c2:CipherState?) {
-    
+  public func readMessage(_ inboundMessage: [UInt8]) throws -> (payload: [UInt8], c1: CipherState?, c2: CipherState?) {
     guard self.shouldRead() else {
       throw Noise.Errors.custom("noise: unexpected call to ReadMessage should be WriteMessage")
     }
-    guard _msgIndex < messagePattern.count else {
+    guard msgIndex < messages.count else {
       throw Noise.Errors.custom("noise: no handshake messages left")
     }
     
@@ -242,17 +220,17 @@ public class HandshakeState {
     symmetricState.checkpoint()
     
     // Get the next set of messages to process...
-    let pattern = messagePattern[_msgIndex].messages
+    let pattern = messages[msgIndex].tokens
     
-    var inboundMsg:[UInt8] = inboundMessage //Array(inboundMessage.readableBytesView)
-    var bytesRead:Int = 0
+    var inboundMsg: [UInt8] = inboundMessage //Array(inboundMessage.readableBytesView)
+    var bytesRead: Int = 0
     
     // Fetches and deletes the next message pattern from message_patterns, then sequentially processes each token from the message pattern
     for message in pattern {
       //print("Consuming message \(message)")
       switch message {
       case .e, .s:
-        var expected:Int = 32
+        var expected: Int = 32
         if message == .s && symmetricState.cipherState.hasKey() {
           expected += 16
         }
@@ -321,7 +299,7 @@ public class HandshakeState {
       }
     }
     
-    var decryptedPayload:[UInt8] = []
+    var decryptedPayload: [UInt8] = []
     //var decryptedPayload = ByteBuffer()
     
     do {
@@ -338,10 +316,10 @@ public class HandshakeState {
       
     }
     
-    _msgIndex += 1
+    msgIndex += 1
     
     // If there are no more message patterns returns two new CipherState objects by calling Split().
-    if _msgIndex >= messagePattern.count {
+    if msgIndex >= messages.count {
       let split = try symmetricState.split()
       return (payload: decryptedPayload, c1: split.c1, c2: split.c2)
     }
@@ -354,8 +332,8 @@ public class HandshakeState {
   }
   
   public func shouldWrite() -> Bool {
-    guard messagePattern.count > _msgIndex else { return false }
-    let msg = messagePattern[_msgIndex]
+    guard messages.count > msgIndex else { return false }
+    let msg = messages[msgIndex]
     switch msg {
     case .inbound:
       return self.initiator != true
@@ -373,11 +351,11 @@ public class HandshakeState {
     return shared.withUnsafeBytes { Array($0) }
   }
   
-  public func encrypt(msg:[UInt8]) throws -> [UInt8] {
+  public func encrypt(msg: [UInt8]) throws -> [UInt8] {
     return try symmetricState.encryptAndHash(plaintext: msg)
   }
   
-  public func decrypt(msg:[UInt8]) throws -> [UInt8] {
+  public func decrypt(msg: [UInt8]) throws -> [UInt8] {
     return try symmetricState.decryptAndHash(ciphertext: msg)
   }
   
@@ -412,7 +390,6 @@ public class HandshakeState {
   
   /// MessageIndex returns the current handshake message id
   public func messageIndex() -> Int {
-    return _msgIndex
+    return msgIndex
   }
-  
 }

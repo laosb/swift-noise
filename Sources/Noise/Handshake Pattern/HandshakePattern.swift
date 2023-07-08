@@ -16,12 +16,17 @@ public protocol HandshakePattern {
   // Is there any practical use of pre-shared ephemeral keys?
   
   var name: String { get set }
+  var pskModifierString: String { get set }
   var messages: [HandshakeMessagePattern] { get set }
   var initiatorPreMessages: [HandshakeToken] { get set }
   var responderPreMessages: [HandshakeToken] { get set }
 }
 
 public extension HandshakePattern {
+  var hasPSK: Bool {
+    messages.flatMap { $0.tokens }.contains(.psk)
+  }
+  
   func psk(_ placement: Int) throws -> some HandshakePattern {
     var pattern = self
     
@@ -44,6 +49,8 @@ public extension HandshakePattern {
         pattern.messages[placement - 1] = .outbound(messages + [.psk])
       }
     }
+    
+    pattern.pskModifierString = "psk\(placement)"
     
     return pattern
   }

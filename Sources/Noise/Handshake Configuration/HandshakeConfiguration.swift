@@ -24,3 +24,9 @@ public protocol HandshakeConfiguration {
   var handshakePattern: Pattern { get }
   var cipherSuite: CipherSuite { get }
 }
+
+public extension HandshakeConfiguration {
+  var fullProtocolName: String {
+    "Noise_\(handshakePattern.name)\(handshakePattern.pskModifierString)_\(cipherSuite.protocolName)"
+  }
+}

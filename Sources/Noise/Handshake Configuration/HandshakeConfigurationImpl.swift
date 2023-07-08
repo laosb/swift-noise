@@ -18,6 +18,32 @@ public struct HandshakeConfigurationImpl<Pattern: HandshakePattern>: HandshakeCo
   public let handshakePattern: Pattern
   public var cipherSuite: CipherSuite
   
+  init(
+    isInitiator: Bool,
+    staticKey: PrivateKey,
+    remoteStaticKey: PublicKey?,
+    ephemeralKey: PrivateKey? = nil,
+    remoteEphemeralKey: PublicKey? = nil,
+    presharedKey: [UInt8]?,
+    prologue: [UInt8]?,
+    handshakePattern: Pattern,
+    cipherSuite: CipherSuite
+  ) {
+    if handshakePattern.hasPSK && presharedKey == nil {
+      fatalError("Handshake pattern requires a preshared key but none is provided.")
+    }
+    
+    self.isInitiator = isInitiator
+    self.staticKey = staticKey
+    self.remoteStaticKey = remoteStaticKey
+    self.ephemeralKey = ephemeralKey
+    self.remoteEphemeralKey = remoteEphemeralKey
+    self.presharedKey = presharedKey
+    self.prologue = prologue
+    self.handshakePattern = handshakePattern
+    self.cipherSuite = cipherSuite
+  }
+  
   public static func initiator(
     of pattern: Pattern,
     _ cipherSuite: CipherSuite,
