@@ -152,7 +152,7 @@ public class HandshakeState: Codable {
     
     guard self.shouldWrite() else { throw HandshakeError.writeWhenShouldRead }
     guard msgIndex < messages.count else { throw HandshakeError.handshakeFinished }
-    guard payload.count < Noise.maxMessageLength else { throw HandshakeError.messageTooLong }
+    guard payload.count < Constants.maxMessageLength else { throw HandshakeError.messageTooLong }
     
     // Get the next set of messages to process...
     let pattern = messages[msgIndex].tokens
